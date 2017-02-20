@@ -1,9 +1,12 @@
+// Initialise Blynk
 var blynkLib = require('blynk-library');
 var sensorLib = require('node-dht-sensor');
+var Gpio = require('/home/pi/node_modules/onoff').Gpio,
+  relay = new Gpio(30, 'out');
 
 var AUTH = '0ab7483e81cc4406a93533447c040ee1';
 
-// Setup Blynk
+// Setup Blynk connection
 var blynk = new blynkLib.Blynk(AUTH);
 
 // Setup sensor, exit if failed
@@ -14,7 +17,7 @@ if (!sensorLib.initialize(sensorType, sensorPin)) {
     process.exit(1);
 }
 
-// Automatically update sensor value every 2 seconds
+// Automatically update sensor value every 30 seconds
 setInterval(function() {
     var readout = sensorLib.read();
     blynk.virtualWrite(3, readout.temperature.toFixed(1));
@@ -23,3 +26,14 @@ setInterval(function() {
     console.log('Temperature:', readout.temperature.toFixed(1) + 'C');
     console.log('Humidity:   ', readout.humidity.toFixed(1)    + '%');
 }, 30000);
+
+//Re-route GPIO30 to a VirtualPin to allow control of relay via the Blynk app, which can only control up to GPIO27 natively
+var v1 = new blynk.VirtualPin(1);  // virtual pin to control GPIO 30
+v1.on('write', function() {
+        if(relay.readSync() == 0) {  // toggle gpio 30 from high to low
+                relay.writeSync(1);
+        }
+        else {
+                relay.writeSync(0);
+        }
+});
